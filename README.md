@@ -29,7 +29,9 @@ NetProphet 2.0 is a second-generation “data light” TF-network mapping algori
 	Or, on a SLURM system:
 	```
 	# Substitute version numbers as necessary
-	module load py-numpy/1.16.2-python-3.6.5 py-scipy/1.2.1-python-3.6.5
+	# If Python 3.6.5 is loaded
+	module unload python/3.6.5
+	module load python/2.7.15 py-numpy/1.16.2-python-2.7.15 
 	```
 1. Install Snakemake (workflow management system)
 
