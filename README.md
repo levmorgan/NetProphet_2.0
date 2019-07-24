@@ -21,7 +21,17 @@ NetProphet 2.0 is a second-generation “data light” TF-network mapping algori
 	export NETPROPHET2_DIR=/path/to/NetProphet_2.0
 	```
 
-2. Install Snakemake (workflow management system)
+1. Install scipy and numpy
+	```
+	pip3 install --user numpy
+	pip3 install --user scipy
+	```
+	Or, on a SLURM system:
+	```
+	# Substitute version numbers as necessary
+	module load py-numpy/1.16.2-python-3.6.5 py-scipy/1.2.1-python-3.6.5
+	```
+1. Install Snakemake (workflow management system)
 
 	```
 	cd ${NETPROPHET2_DIR}/SRC/
@@ -31,7 +41,7 @@ NetProphet 2.0 is a second-generation “data light” TF-network mapping algori
 	python3 setup.py install --user
 	```
 
-3. Install FIRE program
+1. Install FIRE program
 
 	```
 	cd ${NETPROPHET2_DIR}/SRC/
@@ -42,7 +52,7 @@ NetProphet 2.0 is a second-generation “data light” TF-network mapping algori
 	make
 	```
 
-4. Install MEME suite
+1. Install MEME suite
 
 	```	
 	cd ${NETPROPHET2_DIR}/SRC/
@@ -55,7 +65,7 @@ NetProphet 2.0 is a second-generation “data light” TF-network mapping algori
 	make install
 	```
 
-5. Install R packages
+1. Install R packages
 	* lars v0.9-8
 	* BayesTree v0.3-1.3
 	* [optional] Rmpi v0.5-9 (if MPI is available in your system)
@@ -88,7 +98,7 @@ NetProphet 2.0 is a second-generation “data light” TF-network mapping algori
 	export PATH=${NETPROPHET2_DIR}/SRC/meme/bin/:$PATH
 	```
 
-2. Configure input, parameter and output in `config.json`. All required resources files are in directory `RESOURCES/`, and the output network file is in directory `OUTPUT/`. See **DESCRIPTION OF RESOURCE FILES**, **DESCRIPTION OF INPUT PARAMETERS** and **DESCRIPTION OF OUTPUT FILE** for details.
+1. Configure input, parameter and output in `config.json`. All required resources files are in directory `RESOURCES/`, and the output network file is in directory `OUTPUT/`. See **DESCRIPTION OF RESOURCE FILES**, **DESCRIPTION OF INPUT PARAMETERS** and **DESCRIPTION OF OUTPUT FILE** for details.
 	
 	```json
 	{
@@ -107,7 +117,7 @@ NetProphet 2.0 is a second-generation “data light” TF-network mapping algori
 	}
 	```
 
-3. Run NetProphet 2.0 in SLURM parallelized fashion with optionally receiving email update on the process.
+1. Run NetProphet 2.0 in SLURM parallelized fashion with optionally receiving email update on the process.
 
 	```
 	cd ${NETPROPHET2_DIR}
@@ -121,7 +131,7 @@ NetProphet 2.0 is a second-generation “data light” TF-network mapping algori
 	./NetProphet2 -s -f <config_file>
 	```
 
-4. Progress monitoring and debugging. After the SLURM job starts, a log file records the progress as the following.
+1. Progress monitoring and debugging. After the SLURM job starts, a log file records the progress as the following.
 	
 	```
 	Unlocking working directory.
