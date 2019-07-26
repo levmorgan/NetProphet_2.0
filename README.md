@@ -70,7 +70,7 @@ NetProphet 2.0 is a second-generation “data light” TF-network mapping algori
 1. Install OpenMPI, if necessary
 	```
 	# On SLURM
-	module load openmpi/3.1.3-python-2.7.15
+	module load openmpi/3.1.3-python-2.7.15-legacylaunchers
 	```
 
 1. Install R packages
