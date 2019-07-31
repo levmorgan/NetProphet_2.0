@@ -67,12 +67,6 @@ NetProphet 2.0 is a second-generation “data light” TF-network mapping algori
 	make install
 	```
 
-1. Install OpenMPI, if necessary
-	```
-	# On SLURM
-	module load openmpi/3.1.3-python-2.7.15-legacylaunchers
-	```
-
 1. Install R packages
 	* lars v0.9-8
 	* BayesTree v0.3-1.3
@@ -80,7 +74,7 @@ NetProphet 2.0 is a second-generation “data light” TF-network mapping algori
 
 	```
 	cd ${NETPROPHET2_DIR}/SRC/R_pkgs/
-	module load R/3.2.1  # SLURM specific, if not loaded by default
+	module load R/3.5.1  # SLURM specific, if not loaded by default
 	R
 	```
 
@@ -89,10 +83,20 @@ NetProphet 2.0 is a second-generation “data light” TF-network mapping algori
 	```R
 	> install.packages("BayesTree_0.3-1.3.tar.gz", lib="<your_local_R_lib>") 
 	> install.packages("lars_0.9-8.tar.gz", lib="<your_local_R_lib>")
-	> install.packages("Rmpi_0.5-9.tar.gz", lib="<your_local_R_lib>") # if MPI available
 	```
 
-1. If compilation failed for Rmpi, you may need to install it this way (assuming you're using OpenMPI)
+1. Install OpenMPI and Rmpi if necessary
+	```
+	# On SLURM
+	module load openmpi/3.1.3-python-2.7.15-legacylaunchers
+	module load r-rmpi/0.6-6-python-2.7.15-r-3.5.1
+	```
+
+	Otherwise:
+	```
+	> install.packages("Rmpi_0.5-9.tar.gz", lib="<your_local_R_lib>") # if MPI available
+	```
+	If compilation failed for Rmpi, you may need to install it this way. 
 	```
 	R CMD INSTALL -l "<your_local_R_lib>" --configure-args="--with-Rmpi-type=OPENMPI" Rmpi_0.5-9.tar.gz
 	```
