@@ -14,8 +14,7 @@ use_serial=${5}
 if $use_serial ; then
 	Rscript --vanilla ./CODE/build_bart_network.r fcFile=${data_fc_expr} isPerturbedFile=${pert_matrix} tfNameFile=${tf_names} saveTo=${output_adjmtr}.tsv useMpi=FALSE
 else 
-	module load R/3.2.1
-	module load openmpi
+	module load R/3.5.1 openmpi/3.1.3-python-2.7.15-legacylaunchers r-rmpi/0.6-6-python-2.7.15-r-3.5.1
 	Rscript --vanilla ../CODE/build_bart_network.r fcFile=${data_fc_expr} isPerturbedFile=${pert_matrix} tfNameFile=${tf_names} saveTo=${output_adjmtr}.tsv useMpi=TRUE mpiBlockSize=32
 fi
 sed '1d' ${output_adjmtr}.tsv > ${output_adjmtr}
