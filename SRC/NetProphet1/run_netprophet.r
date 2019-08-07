@@ -1,3 +1,6 @@
+# library(future.apply)
+# plan(multiprocess, workers=availableCores()-1)
+
 args <- commandArgs(trailingOnly = TRUE)
 targetExpressionFile <- toString(args[1])
 regulatorExpressionFile <- toString(args[2])
@@ -5,7 +8,7 @@ allowedMatrixFile <- toString(args[3])
 perturbationMatrixFile <- toString(args[4])
 differentialExpressionMatrixFile <- toString(args[5])
 microarrayFlag <- as.integer(args[6])
-nonGlobalShrinkageFlag <- as.integer(args[7])
+nonGlobalShrinkageFlag <- 1# as.integer(args[7])
 lassoAdjMtrFileName <- toString(args[8])
 combinedAdjMtrFileName <- toString(args[9])
 outputDirectory <- toString(args[10])
@@ -15,6 +18,7 @@ targetGeneNamesFileName <- toString(args[13])
 
 source("global.lars.regulators.r")
 
+cat("Loading data...\n")
 tdata <- as.matrix(read.table(targetExpressionFile))
 rdata <- as.matrix(read.table(regulatorExpressionFile))
 allowed <- as.matrix(read.table(allowedMatrixFile))
@@ -29,14 +33,20 @@ if(microarrayFlag == 0) {
 }
 
 ## Skip regression on some genes
-cat("Gene skipped count:")
+cat("Gene skipped count:\n")
 skip_gen <- rep(0, dim(tdata)[1])
 for (i in 1:dim(tdata)[1]) {
 	if (sum(tdata[i,] != 0) < dim(tdata)[2]/10+1) {
 		skip_gen[i] = 1
 	}
 }
-cat(length(which(skip_gen == 1)), "\nRegulator skipped:")
+# skip_gen <- future_apply(tdata, 1, function(row) {
+# 	if (sum(row != 0) < dim(tdata)[2]/10+1) {
+# 		return(1)
+# 	}
+# 	return(0)
+# })
+cat(length(which(skip_gen == 1)), "\nRegulator skipped:\n")
 skip_reg <- rep(0, dim(rdata)[1])
 for (i in 1:dim(rdata)[1]) {
 	if (sum(rdata[i,] != 0) < 1) {
@@ -46,6 +56,7 @@ for (i in 1:dim(rdata)[1]) {
 }
 cat("\n")
 
+cat("Centering and scaling data\n")
 ## Center data
 tdata <- tdata - apply(tdata,1,mean)
 rdata <- rdata - apply(rdata,1,mean)
@@ -64,14 +75,17 @@ rdata <- rdata / ( r.norm * sqrt(dim(rdata)[2]-1) )
 # rdata <- rdata / r.sd
 
 ## Compute unweighted solution
+cat("Computing unweighted solution\n")
 prior <- matrix(1,ncol=dim(tdata)[1] ,nrow=dim(rdata)[1] )
 
 ## TODO: Both seed and # of cv folds (in global.lars.regulators.r) are parameters that should be exposed to the user
 seed <- 747
 set.seed(seed)
 
+cat("Computing lasso solution\n")
 if (nonGlobalShrinkageFlag == 1) {
-	uniform.solution <- lars.local(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
+	#uniform.solution <- lars.local(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
+	uniform.solution <- lm.local(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
 } else {
 	uniform.solution <- lars.multi.optimize(tdata,rdata,pert,prior,allowed)
 }
@@ -86,3 +100,4 @@ source("combine_models.r")
 # 	source("make_adjacency_list.r")
 # }
 
+cat("Successfully generated solution at ", outputDirectory, "\n")

@@ -1,6 +1,8 @@
 ###### multiple response LARS (single combined)
 ##TODO: Need to make # of folds a parameter exposed to used
 library(lars)
+library(future.apply)
+plan(multiprocess, workers=availableCores()-1)
 
 lars.multi.optimize <- function(tdata,rdata,pert,prior,allowed)
 {
@@ -385,20 +387,66 @@ lars.multi.optimize.parallel <- function()
 	rval
 }
 
+lm.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
+{
+  cat(as.character(Sys.time()),"\n")
+  B.adj <- matrix(0,nrow=dim(rdata)[1],ncol=dim(tdata)[1])
+	
+  cat("Working on Gene:")
+	#future_sapply(1:dim(tdata)[1], function(i) {
+	for (i in 1:dim(tdata)[1]) {
+		if (skip_gen[i] == 0) {
+		 	cat(i,"")
+			mindices <- which(pert[i,]==0)
+			x <- rdata[,mindices] * prior[,i]
+
+			# Remove disallowed genes and regulators
+			nindices <- which(skip_reg==0)
+			x[which(allowed[,i]==0),]<-0;
+			x <- t(x[nindices,])
+			y <- tdata[i,mindices]
+
+			model.data <- as.data.frame(x)
+			model.data$y <- y
+
+			# Do the regression with no intercept
+			regulator.weights <- lm(y~.+0, data=model.data)$coefficients
+			skipped.indices <- which(skip_reg==1)
+			temp.col <- c(regulator.weights, rep(0,length( dim(skipped.indices)[1] )))
+			temp.indices <- c(seq_along(regulator.weights), skipped.indices+.5)
+
+			B.adj[,i] <- temp.col[order(temp.indices)]
+			#Scale B.adj according to prior		
+			B.adj[,i] <- B.adj[,i] * prior[,i]
+		}
+	#}, future.stdout=NA)
+	}
+	cat("\n")
+
+	rval <- list()
+  rval[[1]] <- B.adj
+  rval
+}
+
+
 lars.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
 {
   cat(as.character(Sys.time()),"\n")
   B.adj <- matrix(0,nrow=dim(rdata)[1],ncol=dim(tdata)[1])
 	
   cat("Working on Gene:")
-	for(i in 1:dim(tdata)[1]) {
+	future_sapply(1:dim(tdata)[1], function(i) {
 		if (skip_gen[i] == 0) {
-		 	cat(i,",")
+		 	cat(i)
 			mindices <- which(pert[i,]==0)
 			x <- rdata[,mindices] * prior[,i]
+
+			# Remove disallowed genes and regulators
 			x[which(allowed[,i]==0),]<-0;
 			nindices <- which(skip_reg==0)
 			x <- x[nindices,]
+
+
 			lars.paths.cv <-  cv.lars(t(x),tdata[i,mindices],K=3,trace=FALSE,max.steps=600,type="lasso",normalize=FALSE,intercept=TRUE,se=FALSE, plot.it=FALSE,use.Gram=FALSE);
 			minFrac <- lars.paths.cv$index[which.min(lars.paths.cv$cv)]
 			lars.paths <- lars(t(x),tdata[i,mindices],trace=FALSE,max.steps=600,type="lasso",normalize=FALSE,intercept=TRUE,use.Gram=FALSE);
@@ -407,13 +455,13 @@ lars.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
 			# tempVec <- lars.paths$beta
 			# print(tempVec)
 			nindices <- which(skip_reg==1)
-      tempCol <- c(tempVec, rep(0,length(nindices)))
-      tempIndices <- c(seq_along(tempVec), nindices+.5)
-      B.adj[,i] <- tempCol[order(tempIndices)]
-      #Scale B.adj according to prior		
+			tempCol <- c(tempVec, rep(0,length(nindices)))
+			tempIndices <- c(seq_along(tempVec), nindices+.5)
+			B.adj[,i] <- tempCol[order(tempIndices)]
+			#Scale B.adj according to prior		
 			B.adj[,i] <- B.adj[,i] * prior[,i]
 		}
-	}
+	}, future.stdout=NA)
 	cat("\n")
 
 	rval <- list()
