@@ -1,5 +1,10 @@
 # library(future.apply)
 # plan(multiprocess, workers=availableCores()-1)
+make.matrix.mask <- function(v1, v2) {
+	mask <- as.logical(outer(v1, v2))
+	mask <- matrix(mask, nrow=length(v1), ncol=length(v2))
+	mask
+}
 
 args <- commandArgs(trailingOnly = TRUE)
 targetExpressionFile <- toString(args[1])
@@ -16,8 +21,6 @@ combinedAdjLstFileName <- toString(args[11])
 regulatorGeneNamesFileName <- toString(args[12])
 targetGeneNamesFileName <- toString(args[13])
 
-source("global.lars.regulators.r")
-source("mixed_clr.r")
 
 cat("Loading data...\n")
 tdata <- as.matrix(read.table(targetExpressionFile))
@@ -34,7 +37,7 @@ if(microarrayFlag == 0) {
 }
 
 ## Skip regression on some genes
-cat("Gene skipped count:\n")
+cat("Gene samples skipped count:\n")
 skip_gen <- rep(0, dim(tdata)[1])
 for (i in 1:dim(tdata)[1]) {
 	if (sum(tdata[i,] != 0) < dim(tdata)[2]/10+1) {
@@ -47,7 +50,7 @@ for (i in 1:dim(tdata)[1]) {
 # 	}
 # 	return(0)
 # })
-cat(length(which(skip_gen == 1)), "\nRegulator skipped:\n")
+cat(length(which(skip_gen == 1)), "\nRegulator samples skipped:\n")
 skip_reg <- rep(0, dim(rdata)[1])
 for (i in 1:dim(rdata)[1]) {
 	if (sum(rdata[i,] != 0) < 1) {
@@ -83,25 +86,27 @@ prior <- matrix(1,ncol=dim(tdata)[1] ,nrow=dim(rdata)[1] )
 seed <- 747
 set.seed(seed)
 
-
 cat("Computing mutual information between regulators and targets\n")
 x <- rdata * prior[,i]
 
 # Remove disallowed genes and regulators
-x.for.mi <- tdata[,skip_gen == 0]
-y.for.mi <- rdata[,skip_reg == 0]
+filt.tdata <- t(tdata[,skip_gen == 0])
+filt.rdata <- t(rdata[,skip_reg == 0])
 
-mutual.information <- mi(x=x.for.mi, y=y.for.mi)
+source("mixed_clr.r")
+mutual.information <- mi(x=filt.tdata, y=filt.rdata)
 cat("Computing CLR\n")
 clr.results <- mixedCLR(mi.stat=data.frame(), mi.dyn=mutual.information)
-
-save(mutual.information, clr.results, file="/home/levmorgan/NetProphet_2.0/SRC/NetProphet1/clr_debug.Rdata")
+dim(clr.results)
 quit()
 
+source("global.lars.regulators.r")
 cat("Computing OLS solution\n")
-uniform.solution <- lm.local(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
+uniform.solution <- lm.local(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen,
+														 clr.results)
 
-lasso_component <- uniform.solution[[1]]
+lasso_component <- matrix(0L, nrow = dim(rdata)[2], ncol = dim(tdata)[2])
+lasso_component[rdata.ind, tdata.ind] <- uniform.solution
 write.table(lasso_component,file.path(outputDirectory,lassoAdjMtrFileName),row.names=FALSE,col.names=FALSE,quote=FALSE)
 
 ## Perform model averaging to get final NetProphet Predictions

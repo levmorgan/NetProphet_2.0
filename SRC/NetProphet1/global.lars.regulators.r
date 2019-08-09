@@ -387,8 +387,9 @@ lars.multi.optimize.parallel <- function()
 	rval
 }
 
-lm.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
+lm.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen,clr.results)
 {
+	top.edges <- clr.results[1:10,]
 	cat(as.character(Sys.time()),"\n")
 	B.adj <- matrix(0,nrow=dim(rdata)[1],ncol=dim(tdata)[1])
 
@@ -407,10 +408,17 @@ lm.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
 			y <- tdata[i,mindices]
 
 			model.data <- as.data.frame(x)
+			top.regulators <- colnames(model.data)[top.edges[,i]]
 			model.data$y <- y
 
 			# Do the regression with no intercept
-			regulator.weights <- lm(y~.+0, data=model.data)$coefficients
+			form <- as.formula(paste("y ~", 
+															 paste(top.regulators, collapse = "+"),
+															 "+0",
+															 sep = ""))
+
+			regulator.weights <- rep.int(0, dim(x)[2])
+			regulator.weights[top.edges[,i]] <- lm(form, data=model.data)$coefficients
 			skipped.indices <- which(skip_reg==1)
 			temp.col <- c(regulator.weights, rep(0,length( dim(skipped.indices)[1] )))
 			temp.indices <- c(seq_along(regulator.weights), skipped.indices+.5)
