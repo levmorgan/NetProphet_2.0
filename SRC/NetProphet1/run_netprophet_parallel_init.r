@@ -38,3 +38,13 @@ source("combine_models.r")
 # if(length(args) == 13 & file.exists(regulatorGeneNamesFileName) & file.exists(targetGeneNamesFileName)){
 #   source("make_adjacency_list.r")
 # }
+
+# Bootstrapping approach:
+# We have to run model selection 20x - write a separate R file with relevant logic
+# for each beta in each model, evaluate s_i,j = \sigma^2 without that beta (set it to 0?)/\sigma^2 with it
+# average score for each beta, this is our final ranked list
+
+
+# Use mpi.applyLB over a list/vector of genes
+# function takes a gene name and whatever data we're running lasso on
+# runs boot to calculate variance explained with the gene and without the gene 20x

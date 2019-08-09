@@ -84,6 +84,8 @@ NetProphet 2.0 is a second-generation “data light” TF-network mapping algori
 	> install.packages("BayesTree_0.3-1.3.tar.gz", lib="<your_local_R_lib>") 
 	> install.packages("lars_0.9-8.tar.gz", lib="<your_local_R_lib>")
 	> install.packages("abind", repos='http://cran.us.r-project.org', lib="<your_local_R_lib>")
+	> install.packages("future.apply", repos='http://cran.us.r-project.org', lib="<your_local_R_lib>")
+	> install.packages("infotheo", repos='http://cran.us.r-project.org', lib="<your_local_R_lib>")
 	```
 
 1. Install OpenMPI and Rmpi if necessary

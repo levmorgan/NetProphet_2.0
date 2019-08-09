@@ -17,6 +17,7 @@ regulatorGeneNamesFileName <- toString(args[12])
 targetGeneNamesFileName <- toString(args[13])
 
 source("global.lars.regulators.r")
+source("mixed_clr.r")
 
 cat("Loading data...\n")
 tdata <- as.matrix(read.table(targetExpressionFile))
@@ -82,13 +83,23 @@ prior <- matrix(1,ncol=dim(tdata)[1] ,nrow=dim(rdata)[1] )
 seed <- 747
 set.seed(seed)
 
-cat("Computing lasso solution\n")
-if (nonGlobalShrinkageFlag == 1) {
-	#uniform.solution <- lars.local(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
-	uniform.solution <- lm.local(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
-} else {
-	uniform.solution <- lars.multi.optimize(tdata,rdata,pert,prior,allowed)
-}
+
+cat("Computing mutual information between regulators and targets\n")
+x <- rdata * prior[,i]
+
+# Remove disallowed genes and regulators
+x.for.mi <- tdata[,skip_gen == 0]
+y.for.mi <- rdata[,skip_reg == 0]
+
+mutual.information <- mi(x=x.for.mi, y=y.for.mi)
+cat("Computing CLR\n")
+clr.results <- mixedCLR(mi.stat=data.frame(), mi.dyn=mutual.information)
+
+save(mutual.information, clr.results, file="/home/levmorgan/NetProphet_2.0/SRC/NetProphet1/clr_debug.Rdata")
+quit()
+
+cat("Computing OLS solution\n")
+uniform.solution <- lm.local(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
 
 lasso_component <- uniform.solution[[1]]
 write.table(lasso_component,file.path(outputDirectory,lassoAdjMtrFileName),row.names=FALSE,col.names=FALSE,quote=FALSE)
