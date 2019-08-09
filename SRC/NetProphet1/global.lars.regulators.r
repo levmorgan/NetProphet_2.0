@@ -8,7 +8,7 @@ lars.multi.optimize <- function(tdata,rdata,pert,prior,allowed)
 {
 	cat(as.character(Sys.time()),"\n")
 	lars.paths.cv <- lars.multi.cv(tdata,rdata,pert,prior,allowed,10)
-	
+
 	lars.paths <- lars.multi(tdata,rdata,pert,prior,allowed)
 	B <- lars.multi.path.step(lars.paths,lars.paths.cv[[2]])
 
@@ -28,7 +28,7 @@ lars.multi.optimize <- function(tdata,rdata,pert,prior,allowed)
 }
 
 lars.multi.cv <- function(tdata,rdata,pert,prior,allowed,fold)
-{	
+{
 	all.folds <- cv.folds(dim(tdata)[2], fold)
 	lars.cv.paths <- list()
 	cMax <- 0;
@@ -41,13 +41,13 @@ lars.multi.cv <- function(tdata,rdata,pert,prior,allowed,fold)
 		{
 			cMax <- lars.cv.paths[[f]]$R[1,1]
 		}
-		
+
 	}
 
 	cSteps <- c()
 	mse <- c()
 	bnorm <- c()
-	
+
 	converged <- FALSE
 	P <- c(cMax/10,0)
 	FP <- c(lars.multi.cv.eval(P[1],fold,lars.cv.paths,all.folds,tdata,rdata,pert,prior,allowed),lars.multi.cv.eval(P[2],fold,lars.cv.paths,all.folds,tdata,rdata,pert,prior,allowed))
@@ -69,8 +69,8 @@ lars.multi.cv <- function(tdata,rdata,pert,prior,allowed,fold)
 			FPref <- max(FP) + Pref^2
 		else
 			FPref <- lars.multi.cv.eval(Pref,fold,lars.cv.paths,all.folds,tdata,rdata,pert,prior,allowed)
-		
-			if (FPref < FP[Imin])		
+
+			if (FPref < FP[Imin])
 			{
 				#Attempt expansion
 				Pexp <- 2*Pref - Phat
@@ -125,7 +125,7 @@ lars.multi.cv.eval <- function(cVal,fold,lars.cv.paths,all.folds,tdata,rdata,per
 			{
 				omit <- all.folds[[f]]
 				omit <- setdiff(omit,which(pert[i,]!=0))
-				
+
 				testx <- rdata[,omit]
 				testy <- tdata[i,omit]
 				testx[which(allowed[,i]==0),] <- 0
@@ -146,7 +146,7 @@ lars.multi <- function(tdata,rdata,pert,prior,allowed)
 {
 	lars.paths <- list()
 	targets <- seq(dim(tdata)[1])
-	
+
 
 	cat("Building path for target: ")
 	for (i in targets)
@@ -154,19 +154,19 @@ lars.multi <- function(tdata,rdata,pert,prior,allowed)
 		cat(i,"")
 		mindices <- which(pert[i,]==0)
 
-		x <- rdata[,mindices] * prior[,i] 
-		x[which(allowed[,i]==0),]<-0; 
+		x <- rdata[,mindices] * prior[,i]
+		x[which(allowed[,i]==0),]<-0;
 
 		##### YK patch 05-23-2017
 		# results.lars <- lars(t(x),tdata[i,mindices],trace=FALSE,max.steps=600,type="lasso",normalize=FALSE,intercept=TRUE,use.Gram=FALSE);
 		y <- tdata[i,mindices];
 		results.lars.flag <- TRUE;
-		sample.indx <- length(y); 
+		sample.indx <- length(y);
 		while (results.lars.flag) {
 			results.lars <- try(lars(t(x[,1:sample.indx]),y[1:sample.indx],trace=FALSE,max.steps=600,type="lasso",normalize=FALSE,intercept=TRUE,use.Gram=FALSE));
 			results.lars.flag <- class(results.lars) =='try-error';
 			if (results.lars.flag) { cat(' *no soln* '); }
-			sample.indx <- sample.indx-1; 
+			sample.indx <- sample.indx-1;
 		}
 		#####
 		lars.paths[[i]] <- list(beta=results.lars$beta, mu=results.lars$mu, meanx=results.lars$meanx, C.Max=c(results.lars$C.Max,0))
@@ -197,7 +197,7 @@ lars.multi.path.step <- function(lars.paths,stepC)
 	A <- c()
 	Ai <- unique(lars.paths$R[1:k,2])
 	for (i in Ai)
-	{	
+	{
 		A <- rbind(A,c(i,lars.paths$R[max(which(lars.paths$R[1:k,2]==i)),3]))
 	}
 
@@ -251,19 +251,19 @@ lars.single.cv <- function(tdata,rdata,pert,prior,allowed,fold,seed)
 	B <- matrix(0,nrow=dim(rdata)[1],ncol=dim(tdata))
 
 	minFrac <- c()
-  cat("Building path for target: ")
-  for (i in targets)
-  {
-    cat(i,"")
-    mindices <- which(pert[i,]==0)
-    x <- rdata[,mindices] * prior[,i]
-    x[which(allowed[,i]==0),]<-0;
-    set.seed(seed)
-    lars.paths.cv[[i]] <-  cv.lars(t(x),tdata[i,mindices],K=fold,plot.it=FALSE,trace=FALSE,max.steps=600,type="lasso",normalize=FALSE,intercept=TRUE,se=FALSE);
+	cat("Building path for target: ")
+	for (i in targets)
+	{
+		cat(i,"")
+		mindices <- which(pert[i,]==0)
+		x <- rdata[,mindices] * prior[,i]
+		x[which(allowed[,i]==0),]<-0;
+		set.seed(seed)
+		lars.paths.cv[[i]] <-	cv.lars(t(x),tdata[i,mindices],K=fold,plot.it=FALSE,trace=FALSE,max.steps=600,type="lasso",normalize=FALSE,intercept=TRUE,se=FALSE);
 		minFrac[i] <- lars.paths.cv[[i]]$index[which.min(lars.paths.cv[[i]]$cv)]
 		lars.paths[[i]] <- lars(t(x),tdata[i,mindices],trace=FALSE,max.steps=600,type="lasso",normalize=FALSE,intercept=TRUE);
 		B[,i] <- predict(lars.paths[[i]],s=minFrac[i],type="coefficients",mode="fraction")$coefficients
-  }	
+	}
 	cat("\n")
 	B
 }
@@ -277,7 +277,7 @@ lars.multi.cv.eval.parallel <- function(cVal)
 	{
 		omit <- all.folds[[f]]
 		omit <- setdiff(omit,which(pert[i,]!=0))
-		
+
 		testx <- rdata[,omit]
 		testy <- tdata[i,omit]
 		testx[which(allowed[,i]==0),] <- 0
@@ -298,33 +298,33 @@ lars.multi.cv.cmax.parallel <- function()
 }
 
 lars.multi.cv.parallel <- function()
-{	
+{
 	cMax <- max(as.numeric(mpi.remote.exec(lars.multi.cv.cmax.parallel())))
 	cat("cMax: ", cMax, "\n")
 	converged <- FALSE
 	P <- c(cMax/10,0)
-	
+
 	FP <- c(mean(as.numeric(mpi.remote.exec(cmd=lars.multi.cv.eval.parallel,P[1]))),mean(as.numeric(mpi.remote.exec(cmd=lars.multi.cv.eval.parallel,P[2]))))
-	
+
 	while (!converged)
 	{
 		Imin <- which.min(FP)
 		Imax <- which.max(FP)
 		if (Imin==Imax)
 			converged=TRUE
-	
+
 		cat("P:",P,"F(P):",FP,"Max/Min",Imax,Imin,"\n")
 		Phat <- P[Imin]
 		Pref <- 2*Phat - P[Imax]
-	
+
 		if (Pref>cMax)
 			FPref <- max(FP) + (Pref-cMax)^2
 		else if (Pref<0)
 			FPref <- max(FP) + Pref^2
 		else
 			FPref <- mean(as.numeric(mpi.remote.exec(cmd=lars.multi.cv.eval.parallel,Pref)))
-		
-			if (FPref < FP[Imin])		
+
+			if (FPref < FP[Imin])
 			{
 				#Attempt expansion
 				Pexp <- 2*Pref - Phat
@@ -359,7 +359,7 @@ lars.multi.cv.parallel <- function()
 				}
 			}
 	}
-	
+
 	cat(P[which.min(FP)],min(FP),"\n")
 
 	P[which.min(FP)]
@@ -369,16 +369,16 @@ lars.multi.optimize.parallel <- function()
 {
 	cat(as.character(Sys.time()),"\n")
 	c.cvmin <- lars.multi.cv.parallel()
-	
+
 	lars.paths <- lars.multi(tdata,rdata,pert,prior,allowed)
 	B <- lars.multi.path.step(lars.paths,c.cvmin)
-	
+
 	B.adj <- matrix(0,nrow=dim(rdata)[1],ncol=dim(tdata)[1])
-	
+
 	for (i in seq(dim(tdata)[1]))
 	{
 		#Scale B.adj according to prior
-		B.adj[,i] <- B[[i]] * prior[,i] 
+		B.adj[,i] <- B[[i]] * prior[,i]
 	}
 	rval <- list()
 	rval[[1]] <- B.adj
@@ -389,14 +389,14 @@ lars.multi.optimize.parallel <- function()
 
 lm.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
 {
-  cat(as.character(Sys.time()),"\n")
-  B.adj <- matrix(0,nrow=dim(rdata)[1],ncol=dim(tdata)[1])
-	
-  cat("Working on Gene:")
+	cat(as.character(Sys.time()),"\n")
+	B.adj <- matrix(0,nrow=dim(rdata)[1],ncol=dim(tdata)[1])
+
+	cat("Working on Gene:")
 	#future_sapply(1:dim(tdata)[1], function(i) {
 	for (i in 1:dim(tdata)[1]) {
 		if (skip_gen[i] == 0) {
-		 	cat(i,"")
+			cat(i,"")
 			mindices <- which(pert[i,]==0)
 			x <- rdata[,mindices] * prior[,i]
 
@@ -416,7 +416,7 @@ lm.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
 			temp.indices <- c(seq_along(regulator.weights), skipped.indices+.5)
 
 			B.adj[,i] <- temp.col[order(temp.indices)]
-			#Scale B.adj according to prior		
+			#Scale B.adj according to prior
 			B.adj[,i] <- B.adj[,i] * prior[,i]
 		}
 	#}, future.stdout=NA)
@@ -424,20 +424,20 @@ lm.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
 	cat("\n")
 
 	rval <- list()
-  rval[[1]] <- B.adj
-  rval
+	rval[[1]] <- B.adj
+	rval
 }
 
 
 lars.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
 {
-  cat(as.character(Sys.time()),"\n")
-  B.adj <- matrix(0,nrow=dim(rdata)[1],ncol=dim(tdata)[1])
-	
-  cat("Working on Gene:")
+	cat(as.character(Sys.time()),"\n")
+	B.adj <- matrix(0,nrow=dim(rdata)[1],ncol=dim(tdata)[1])
+
+	cat("Working on Gene:")
 	future_sapply(1:dim(tdata)[1], function(i) {
 		if (skip_gen[i] == 0) {
-		 	cat(i)
+			cat(i)
 			mindices <- which(pert[i,]==0)
 			x <- rdata[,mindices] * prior[,i]
 
@@ -447,7 +447,7 @@ lars.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
 			x <- x[nindices,]
 
 
-			lars.paths.cv <-  cv.lars(t(x),tdata[i,mindices],K=3,trace=FALSE,max.steps=600,type="lasso",normalize=FALSE,intercept=TRUE,se=FALSE, plot.it=FALSE,use.Gram=FALSE);
+			lars.paths.cv <-	cv.lars(t(x),tdata[i,mindices],K=3,trace=FALSE,max.steps=600,type="lasso",normalize=FALSE,intercept=TRUE,se=FALSE, plot.it=FALSE,use.Gram=FALSE);
 			minFrac <- lars.paths.cv$index[which.min(lars.paths.cv$cv)]
 			lars.paths <- lars(t(x),tdata[i,mindices],trace=FALSE,max.steps=600,type="lasso",normalize=FALSE,intercept=TRUE,use.Gram=FALSE);
 			# lars.paths <- lars(t(x),tdata[i,mindices],trace=FALSE,max.steps=600,type="lasso",normalize=FALSE,intercept=TRUE,use.Gram=TRUE);
@@ -458,14 +458,14 @@ lars.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
 			tempCol <- c(tempVec, rep(0,length(nindices)))
 			tempIndices <- c(seq_along(tempVec), nindices+.5)
 			B.adj[,i] <- tempCol[order(tempIndices)]
-			#Scale B.adj according to prior		
+			#Scale B.adj according to prior
 			B.adj[,i] <- B.adj[,i] * prior[,i]
 		}
 	}, future.stdout=NA)
 	cat("\n")
 
 	rval <- list()
-  rval[[1]] <- B.adj
-  rval
+	rval[[1]] <- B.adj
+	rval
 }
 

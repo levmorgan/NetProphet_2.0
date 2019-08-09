@@ -15,7 +15,7 @@ buildInteractions <- function(M,B,D,net_genes,net_regulators,GIDS,RIDS,cutoff)
 			interactions <- rbind(interactions,cbind(rep(RIDS[rindx],times=length(tindx)),GIDS[tindx],M[rindx,tindx],sign(D[rindx,tindx]),sign(B[rindx,tindx]),(sign(D[rindx,tindx])+sign(B[rindx,tindx]))/2,M.rank[rindx,tindx]))
 		}
 	}
-	
+
 	colnames(interactions) <- c("REGULATOR","TARGET","SCORE","DSIGN","BSIGN","CSIGN","RANK")
 	interactions
 }

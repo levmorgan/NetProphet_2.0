@@ -36,7 +36,7 @@ de_component <- as.matrix(read.table(differentialExpressionMatrixFile))
 source("combine_models.r")
 
 # if(length(args) == 13 & file.exists(regulatorGeneNamesFileName) & file.exists(targetGeneNamesFileName)){
-#   source("make_adjacency_list.r")
+#	 source("make_adjacency_list.r")
 # }
 
 # Bootstrapping approach:

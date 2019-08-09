@@ -12,22 +12,22 @@ cat << EOF
 		-o				Output directory. (The default output
 						directory is the working directory)
 		-m				Expression profiles produced by microarrays (logged).
-						By default, NetProphet assumes that the  expression data 
-						were produced by RNA-Seq (ie unlogged counts or FPKMs). 
+						By default, NetProphet assumes that the expression data
+						were produced by RNA-Seq (ie unlogged counts or FPKMs).
 						This flag effects normalization prior to regression.
-		-l				Perform LASSO on each target gene individually. When this 
+		-l				Perform LASSO on each target gene individually. When this
 						flag is set, NetProphet will have a parameter that controls
 						the scaling of the L1 penalty relative to the sum of squared
-						errors for each target gene rather than a single global 
-						weighting parameter. Setting this parameter will in general 
-						reduce NetProphet accuracy in exchange for lower CPU and 
+						errors for each target gene rather than a single global
+						weighting parameter. Setting this parameter will in general
+						reduce NetProphet accuracy in exchange for lower CPU and
 						memory requirements.
-		-c				Parallelize NetProphet. This option requires Grid Engine 
-						and 11 cores, each with at least 20GB of memory. Do not 
+		-c				Parallelize NetProphet. This option requires Grid Engine
+						and 11 cores, each with at least 20GB of memory. Do not
 						set this flag unless your system meets this requirement.
-		-g <targetGeneNamesFile>	Given both target and regulator gene names, NetProphet will 
+		-g <targetGeneNamesFile>	Given both target and regulator gene names, NetProphet will
 						output an adjacency list of predicted interactions
-		-f <regulatorGeneNamesFile>	Given both target and regulator gene names, NetProphet will 
+		-f <regulatorGeneNamesFile>	Given both target and regulator gene names, NetProphet will
 						output an adjacency list of predicted interactions
 		-n				Path and filename of output adjacency matrix.
 EOF
@@ -85,7 +85,7 @@ do
 	case $OPTION in
 		h)
 			usage
-      exit 0
+			exit 0
 			;;
 		o)
 			outputDirectory=$OPTARG
