@@ -4,6 +4,12 @@ library(lars)
 library(future.apply)
 plan(multiprocess, workers=availableCores()-1)
 
+indices.to.logical <- function(indices, logical.length) {
+	.logical <- rep(F, logical.length)
+	.logical[indices] <- T
+	.logical
+}
+
 lars.multi.optimize <- function(tdata,rdata,pert,prior,allowed)
 {
 	cat(as.character(Sys.time()),"\n")
@@ -387,9 +393,8 @@ lars.multi.optimize.parallel <- function()
 	rval
 }
 
-lm.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen,clr.results)
+lm.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen,clr.rankings)
 {
-	top.edges <- clr.results[1:10,]
 	cat(as.character(Sys.time()),"\n")
 	B.adj <- matrix(0,nrow=dim(rdata)[1],ncol=dim(tdata)[1])
 
@@ -398,33 +403,41 @@ lm.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen,clr.result
 	for (i in 1:dim(tdata)[1]) {
 		if (skip_gen[i] == 0) {
 			cat(i,"")
-			mindices <- which(pert[i,]==0)
-			x <- rdata[,mindices] * prior[,i]
+			# Remove perturbed samples and multiply by priors
+			sample.filter <- pert[i,]==0
+			regulator.data <- rdata[,sample.filter] * prior[,i]
 
-			# Remove disallowed genes and regulators
-			nindices <- which(skip_reg==0)
-			x[which(allowed[,i]==0),]<-0;
-			x <- t(x[nindices,])
-			y <- tdata[i,mindices]
+			# Remove disallowed regulators and select top regulators
+			reg.filter <- skip_reg==0
+			#regulator.data[which(allowed[,i]==0),]<-0;
+			reg.filter <- reg.filter & (allowed[,i]==1)
+			gene.data <- tdata[i,sample.filter]
 
-			model.data <- as.data.frame(x)
-			top.regulators <- colnames(model.data)[top.edges[,i]]
-			model.data$y <- y
+			# Select the top 10 edges not already excluded by our filter
+			top.filter <- rep.int(FALSE, length(reg.filter))
+			reg.i <- 1
+			while(sum(top.filter) < 10) {
+				top.filter[clr.rankings[reg.i, i]] <- TRUE
+				top.filter <- top.filter & reg.filter
+				reg.i = reg.i + 1
+			}
+
+			reg.filter <- reg.filter & top.filter
+			regulator.data <- t(regulator.data[reg.filter,])
+
+			model.data <- as.data.frame(regulator.data)
+			model.data$gene.data <- gene.data
 
 			# Do the regression with no intercept
-			form <- as.formula(paste("y ~", 
-															 paste(top.regulators, collapse = "+"),
-															 "+0",
-															 sep = ""))
-
-			regulator.weights <- rep.int(0, dim(x)[2])
-			regulator.weights[top.edges[,i]] <- lm(form, data=model.data)$coefficients
-			skipped.indices <- which(skip_reg==1)
-			temp.col <- c(regulator.weights, rep(0,length( dim(skipped.indices)[1] )))
-			temp.indices <- c(seq_along(regulator.weights), skipped.indices+.5)
-
-			B.adj[,i] <- temp.col[order(temp.indices)]
+			regulator.weights <- rep.int(0, dim(rdata)[1])
+			regulator.weights[reg.filter] <- lm("gene.data~.+0",
+																					data=model.data)$coefficients
+#			if(any(is.na(regulator.weights),
+#						 c(regulator.weights[reg.filter] == 0))) {
+#					browser()
+#			}
 			#Scale B.adj according to prior
+			B.adj[,i] <- regulator.weights
 			B.adj[,i] <- B.adj[,i] * prior[,i]
 		}
 	#}, future.stdout=NA)
@@ -453,7 +466,6 @@ lars.local <- function(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen)
 			x[which(allowed[,i]==0),]<-0;
 			nindices <- which(skip_reg==0)
 			x <- x[nindices,]
-
 
 			lars.paths.cv <-	cv.lars(t(x),tdata[i,mindices],K=3,trace=FALSE,max.steps=600,type="lasso",normalize=FALSE,intercept=TRUE,se=FALSE, plot.it=FALSE,use.Gram=FALSE);
 			minFrac <- lars.paths.cv$index[which.min(lars.paths.cv$cv)]

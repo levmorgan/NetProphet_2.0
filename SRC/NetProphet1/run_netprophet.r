@@ -97,16 +97,14 @@ source("mixed_clr.r")
 mutual.information <- mi(x=filt.tdata, y=filt.rdata)
 cat("Computing CLR\n")
 clr.results <- mixedCLR(mi.stat=data.frame(), mi.dyn=mutual.information)
-dim(clr.results)
-quit()
+clr.rankings <- apply(clr.results, 2, function(col) {order(col, decreasing=T)})
 
 source("global.lars.regulators.r")
 cat("Computing OLS solution\n")
 uniform.solution <- lm.local(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen,
-														 clr.results)
+														clr.rankings)
 
-lasso_component <- matrix(0L, nrow = dim(rdata)[2], ncol = dim(tdata)[2])
-lasso_component[rdata.ind, tdata.ind] <- uniform.solution
+lasso_component <- uniform.solution[[1]]
 write.table(lasso_component,file.path(outputDirectory,lassoAdjMtrFileName),row.names=FALSE,col.names=FALSE,quote=FALSE)
 
 ## Perform model averaging to get final NetProphet Predictions
