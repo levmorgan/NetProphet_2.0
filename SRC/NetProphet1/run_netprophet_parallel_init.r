@@ -15,25 +15,14 @@ targetGeneNamesFileName <- toString(args[13])
 
 source("run_netprophet_parallel.r")
 library(Rmpi)
-mpi.bcast.Robj2slave(targetExpressionFile)
-mpi.bcast.Robj2slave(regulatorExpressionFile)
-mpi.bcast.Robj2slave(allowedMatrixFile)
-mpi.bcast.Robj2slave(perturbationMatrixFile)
-mpi.bcast.Robj2slave(microarrayFlag)
-mpi.bcast.Robj2slave(outputDirectory)
+mpi.bcast.Robj2slave(args)
 
-mpi.remote.exec(source("run_netprophet_parallel_single_process.r"))
-mpi.remote.exec(reportid())
+mpi.remote.exec(source("run_netprophet_parallel.r"))
+full.results <- mpi.remote.exec(run.netprophet.parallel(args))
 uniform.solution <- lars.multi.optimize.parallel()
 
-lasso_component <- uniform.solution[[1]]
-write.table(lasso_component,file.path(outputDirectory,lassoAdjMtrFileName),row.names=FALSE,col.names=FALSE,quote=FALSE)
-#save(solution,file="solution")
-
-de_component <- as.matrix(read.table(differentialExpressionMatrixFile))
 
 ## Perform model averaging to get final NetProphet Predictions
-source("combine_models.r")
 
 # if(length(args) == 13 & file.exists(regulatorGeneNamesFileName) & file.exists(targetGeneNamesFileName)){
 #	 source("make_adjacency_list.r")

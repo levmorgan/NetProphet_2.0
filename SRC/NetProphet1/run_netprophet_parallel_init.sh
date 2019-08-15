@@ -20,7 +20,8 @@ combinedAdjLstFileName=${11}
 regulatorGeneNamesFileName=${12}
 targetGeneNamesFileName=${13}
 
-echo "calling mpirun now, SLURM_NTASKS=${SLURM_NTASKS}"
+#echo "calling mpirun now, SLURM_NTASKS=${SLURM_NTASKS}"
+echo "calling mpirun now, SLURM_NTASKS=20"
 
-mpirun -np ${SLURM_NTASKS} R --no-save -q --args ${targetExpressionFile} ${regulatorExpressionFile} ${allowedMatrixFile} ${perturbationMatrixFile} ${differentialExpressionMatrixFile} ${microarrayFlag} ${nonGlobalShrinkageFlag} ${lassoAdjMtrFileName} ${combinedModelAdjMtrFileName} ${outputDirectory} ${combinedAdjLstFileName} ${regulatorGeneNamesFileName} ${targetGeneNamesFileName} < run_netprophet_parallel_init.r
+mpirun -np 20 R --no-save -q --args ${targetExpressionFile} ${regulatorExpressionFile} ${allowedMatrixFile} ${perturbationMatrixFile} ${differentialExpressionMatrixFile} ${microarrayFlag} ${nonGlobalShrinkageFlag} ${lassoAdjMtrFileName} ${combinedModelAdjMtrFileName} ${outputDirectory} ${combinedAdjLstFileName} ${regulatorGeneNamesFileName} ${targetGeneNamesFileName} < run_netprophet_parallel_init.r
 

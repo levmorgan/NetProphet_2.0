@@ -1,38 +1,52 @@
-source("global.lars.regulators.r")
-## TODO: Both seed and # of cv folds (in global.lars.regulators.r) are parameters that should be exposed to the user
-seed <- 747
-fold <- 10
-tdata <- as.matrix(read.table(targetExpressionFile))
-rdata <- as.matrix(read.table(regulatorExpressionFile))
-allowed <- as.matrix(read.table(allowedMatrixFile))
-pert <- as.matrix(read.table(perturbationMatrixFile))
-targets <- seq(dim(tdata)[1])
+run.netprophet.parallel <- function(args) {
+	my.rank <- mpi.comm.rank()
+	set.seed(747+my.rank)
+	targetExpressionFile <- toString(args[1])
+	regulatorExpressionFile <- toString(args[2])
+	allowedMatrixFile <- toString(args[3])
+	perturbationMatrixFile <- toString(args[4])
+	differentialExpressionMatrixFile <- toString(args[5])
+	microarrayFlag <- as.integer(args[6])
+	nonGlobalShrinkageFlag <- 1# as.integer(args[7])
+	lassoAdjMtrFileName <- toString(args[8])
+	combinedAdjMtrFileName <- toString(args[9])
+	outputDirectory <- toString(args[10])
+	combinedAdjLstFileName <- toString(args[11])
+	regulatorGeneNamesFileName <- toString(args[12])
+	targetGeneNamesFileName <- toString(args[13])
 
-if(microarrayFlag == 0) {
-	##RNA-Seq Data
-	tdata <- log(tdata+1)/log(2)
-	rdata <- log(rdata+1)/log(2)
+
+	cat("Loading data...\n")
+	gene.names <- make.names(read.table(targetGeneNamesFileName,
+													 stringsAsFactors=F)[,1])
+	reg.names <- make.names(read.table(regulatorGeneNamesFileName,
+													stringsAsFactors=F)[,1])
+
+	# Target data. Rows are genes, columns are samples
+	tdata <- as.matrix(read.table(targetExpressionFile, row.names=gene.names))
+	# Regulator data. Rows are TFs, columns are samples
+	rdata <- as.matrix(read.table(regulatorExpressionFile, row.names=reg.names))
+	allowed <- as.matrix(read.table(allowedMatrixFile, row.names=reg.names,
+																	col.names=gene.names))
+	pert <- as.matrix(read.table(perturbationMatrixFile, row.names=gene.names))
+	de_component <- as.matrix(read.table(differentialExpressionMatrixFile,
+																			 row.names=reg.names,
+																			 col.names=gene.names))
+
+	source("run_netprophet.r")
+
+	res <- run_netprophet(gene.names,
+												reg.names,
+												tdata,
+												rdata,
+												allowed,
+												pert,
+												de_component)
+	lasso_component <- res[[1]]
+	write.table(lasso_component,file.path(outputDirectory,paste0("lasso.",rank,".Rdata")),row.names=FALSE,col.names=FALSE,quote=FALSE)
+	combinedAdjMtr <- res[[2]]
+	write.table(combinedAdjMtr,file.path(outputDirectory,paste0("combined.",rank,".Rdata")),row.names=FALSE,col.names=FALSE,quote=FALSE)
+
+	cat("Successfully generated solution at ", outputDirectory, "\n")
+	return(res)
 }
-
-## Center data
-tdata <- tdata - apply(tdata,1,mean)
-rdata <- rdata - apply(rdata,1,mean)
-
-## Scale data
-t.sd <- apply(tdata,1,sd)
-t.sdfloor <- mean(t.sd) + sd(t.sd)
-t.norm <- apply(rbind(rep(t.sdfloor,times=length(t.sd)),t.sd),2,max) / sqrt(dim(tdata)[2])
-tdata <- tdata / ( t.norm * sqrt(dim(tdata)[2]-1) )
-#
-r.sd <- apply(rdata,1,sd)
-r.sdfloor <- mean(r.sd) + sd(r.sd)
-r.norm <- apply(rbind(rep(r.sdfloor,times=length(r.sd)),r.sd),2,max) / sqrt(dim(rdata)[2])
-rdata <- rdata / ( r.norm * sqrt(dim(rdata)[2]-1) )
-
-## Compute unweighted solution
-prior <- matrix(1,ncol=dim(tdata)[1] ,nrow=dim(rdata)[1] )
-
-set.seed(seed)
-
-all.folds <- cv.folds(dim(tdata)[2], fold)
-

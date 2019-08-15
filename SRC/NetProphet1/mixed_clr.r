@@ -1,15 +1,15 @@
 # Modified under MIT License from Inferelator
 # https://github.com/ChristophH/Inferelator
 library("infotheo")
-library(future.apply)
-plan(multiprocess, workers=availableCores()-1)
+#library(future.apply)
+#plan(multiprocess, workers=availableCores()-1)
 
 library("inline")
-#if ('parallel' %in% installed.packages()[, 'Package']) {
-#	library('parallel')
-#} else {
-#	library('multicore')
-#}
+if ('parallel' %in% installed.packages()[, 'Package']) {
+	library('parallel')
+} else {
+	library('multicore')
+}
 
 discretize <- function(X, nbins) {
 	N <- length(X)
