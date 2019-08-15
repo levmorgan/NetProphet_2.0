@@ -1,5 +1,6 @@
-# library(future.apply)
-# plan(multiprocess, workers=availableCores()-1)
+library(future.apply)
+plan(multiprocess, workers=availableCores()-1)
+
 make.matrix.mask <- function(v1, v2) {
 	mask <- as.logical(outer(v1, v2))
 	mask <- matrix(mask, nrow=length(v1), ncol=length(v2))
@@ -21,14 +22,27 @@ combinedAdjLstFileName <- toString(args[11])
 regulatorGeneNamesFileName <- toString(args[12])
 targetGeneNamesFileName <- toString(args[13])
 
-
 cat("Loading data...\n")
-tdata <- as.matrix(read.table(targetExpressionFile))
-rdata <- as.matrix(read.table(regulatorExpressionFile))
-allowed <- as.matrix(read.table(allowedMatrixFile))
-pert <- as.matrix(read.table(perturbationMatrixFile))
-de_component <- as.matrix(read.table(differentialExpressionMatrixFile))
+gene.names <- make.names(read.table(targetGeneNamesFileName,
+												 stringsAsFactors=F)[,1])
+reg.names <- make.names(read.table(regulatorGeneNamesFileName,
+												stringsAsFactors=F)[,1])
+
+# Target data. Rows are genes, columns are samples
+tdata <- as.matrix(read.table(targetExpressionFile, row.names=gene.names))
+# Regulator data. Rows are TFs, columns are samples
+rdata <- as.matrix(read.table(regulatorExpressionFile, row.names=reg.names))
+allowed <- as.matrix(read.table(allowedMatrixFile, row.names=reg.names,
+																col.names=gene.names))
+pert <- as.matrix(read.table(perturbationMatrixFile, row.names=gene.names))
+de_component <- as.matrix(read.table(differentialExpressionMatrixFile,
+																		 row.names=reg.names,
+																		 col.names=gene.names))
 targets <- seq(dim(tdata)[1])
+
+
+
+
 
 if(microarrayFlag == 0) {
 	##RNA-Seq Data
@@ -80,7 +94,8 @@ rdata <- rdata / ( r.norm * sqrt(dim(rdata)[2]-1) )
 
 ## Compute unweighted solution
 cat("Computing unweighted solution\n")
-prior <- matrix(1,ncol=dim(tdata)[1] ,nrow=dim(rdata)[1] )
+prior <- matrix(1,ncol=dim(tdata)[1], nrow=dim(rdata)[1],
+								dimnames=list(reg.names, gene.names))
 
 ## TODO: Both seed and # of cv folds (in global.lars.regulators.r) are parameters that should be exposed to the user
 seed <- 747
@@ -94,17 +109,34 @@ filt.tdata <- t(tdata[,skip_gen == 0])
 filt.rdata <- t(rdata[,skip_reg == 0])
 
 source("mixed_clr.r")
-mutual.information <- mi(x=filt.tdata, y=filt.rdata)
+mutual.information <- t(mi(x=filt.tdata, y=filt.rdata, cpu.n=availableCores()))
 cat("Computing CLR\n")
 clr.results <- mixedCLR(mi.stat=data.frame(), mi.dyn=mutual.information)
+clr.results <- t(clr.results)
+rownames(clr.results) <- gene.names
+colnames(clr.results) <- reg.names
 clr.rankings <- apply(clr.results, 2, function(col) {order(col, decreasing=T)})
 
-source("global.lars.regulators.r")
-cat("Computing OLS solution\n")
-uniform.solution <- lm.local(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen,
-														clr.rankings)
+source("bayesianRegression.R")
+cat("Computing Bayesian Best Subset Regression\n")
+models <- BBSR(X=rdata, Y=tdata, clr.mat=clr.results,
+							 nS=10, no.pr.val=0, weights.mat=t(allowed),# Come back to this
+							 prior.mat=t(prior), cores=availableCores()-1)
+bbsr.results <- matrix(0,ncol=dim(tdata)[1], nrow=dim(rdata)[1],
+								dimnames=list(reg.names, gene.names))
+for (i in 1:length(models)) {
+	gene.model <- models[[i]]
+	bbsr.results[,i][gene.model$pp] <- gene.model$betas.resc
+}
+	
+lasso_component <- bbsr.results
 
-lasso_component <- uniform.solution[[1]]
+# source("global.lars.regulators.r")
+# cat("Computing OLS solution\n")
+# uniform.solution <- lm.local(tdata,rdata,pert,prior,allowed,skip_reg,skip_gen,
+# 														clr.rankings)
+
+#lasso_component <- uniform.solution[[1]]
 write.table(lasso_component,file.path(outputDirectory,lassoAdjMtrFileName),row.names=FALSE,col.names=FALSE,quote=FALSE)
 
 ## Perform model averaging to get final NetProphet Predictions

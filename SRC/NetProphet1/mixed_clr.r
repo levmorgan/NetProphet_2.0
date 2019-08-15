@@ -41,9 +41,8 @@ mi <- function(x, y, nbins=10, cpu.n=1, perm.mat=NULL) {
 	n <- ncol(y)
 	ret <- matrix(0, m, n, dimnames=list(colnames(x), colnames(y)))
 
-	#if (cpu.n == 1) {
-	if (FALSE) {
-#		s <- nrow(x)
+	if (cpu.n == 1) {
+		s <- nrow(x)
 		# return(matrix(mi.in.c4(s, nbins, x, m, y, n, ret)$mi, m, dimnames=list(colnames(x), colnames(y))))
 		print("Calculating mutual information serially")
 		res <- apply(x, 2, function(x.col) {
@@ -53,16 +52,16 @@ mi <- function(x, y, nbins=10, cpu.n=1, perm.mat=NULL) {
 	}
 
 	print("Calculating mutual information in parallel")
-	res <- future_apply(x, 2, function(x.col) {
-		return(as.numeric(apply(y, 2, function(y.col) {mutinformation(x.col, y.col)})))
-	})
-	return(res)
-#	col.list <- split(1:m, cut(1:m, cpu.n, labels=F))
-#	ret.list <- mclapply(col.list, mi.thread, x, y, nbins, mc.cores = cpu.n)
-#	for (i in 1:length(ret.list)) {
-#		ret[col.list[[i]], ] <- ret.list[[i]]
-#	}
-#	return(ret)
+#	res <- future_apply(x, 2, function(x.col) {
+#		return(as.numeric(apply(y, 2, function(y.col) {mutinformation(x.col, y.col)})))
+#	})
+#	return(res)
+	col.list <- split(1:m, cut(1:m, cpu.n, labels=F))
+	ret.list <- mclapply(col.list, mi.thread, x, y, nbins, mc.cores = cpu.n)
+	for (i in 1:length(ret.list)) {
+		ret[col.list[[i]], ] <- ret.list[[i]]
+	}
+	return(ret)
 }
 
 
@@ -72,8 +71,8 @@ mi.thread <- function(cols, x, y, nbins) {
 	n <- ncol(y)
 	s <- nrow(x)
 	ret <- matrix(0, m, n)
-	# return(matrix(mi.in.c4(s, nbins, x, m, y, n, ret)$mi, m))
-	return(matrix(infotheo::mutinformation(x,y)))
+	return(matrix(mi.in.c4(s, nbins, x, m, y, n, ret)$mi, m))
+	# return(matrix(infotheo::mutinformation(x,y)))
 }
 
 mi.in.c4.sig <- signature(n = 'integer', k = 'integer', x = 'integer',
