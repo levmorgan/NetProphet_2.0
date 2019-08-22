@@ -32,13 +32,16 @@ de_component <- as.matrix(read.table(differentialExpressionMatrixFile,
 																		 row.names=reg.names,
 																		 col.names=gene.names))
 
-res <- run_netprophet(gene.names,
-											reg.names,
+res <- run_netprophet(reg.names,
+											gene.names,
 											tdata,
 											rdata,
 											allowed,
 											pert,
-											de_component)
+											de_component,
+											microarrayFlag,
+											bootstrap.run=F
+											)
 lasso_component <- res[[1]]
 write.table(lasso_component,file.path(outputDirectory,lassoAdjMtrFileName),row.names=FALSE,col.names=FALSE,quote=FALSE)
 combinedAdjMtr <- res[[2]]

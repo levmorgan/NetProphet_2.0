@@ -7,13 +7,15 @@ make.matrix.mask <- function(v1, v2) {
 	mask
 }
 
-run_netprophet <- function(gene.names,
-													 reg.names,
+run_netprophet <- function(reg.names,
+													 gene.names,
 													 tdata,
 													 rdata,
 													 allowed,
 													 pert,
-													 de_component) {
+													 de_component,
+													 microarrayFlag,
+													 bootstrap.run=F) {
 	targets <- seq(dim(tdata)[1])
 
 	if(microarrayFlag == 0) {
@@ -37,7 +39,7 @@ run_netprophet <- function(gene.names,
 	# 	return(0)
 	# })
 	cat(length(which(skip_gen == 1)), "\nRegulator samples skipped:\n")
-	skip_reg <- rep(0, dim(rdata)[1])
+	skip_reg <- rep.int(0, dim(rdata)[1])
 	for (i in 1:dim(rdata)[1]) {
 		if (sum(rdata[i,] != 0) < 1) {
 			skip_reg[i] = 1
@@ -68,6 +70,8 @@ run_netprophet <- function(gene.names,
 	cat("Computing unweighted solution\n")
 	prior <- matrix(1,ncol=dim(tdata)[1], nrow=dim(rdata)[1],
 									dimnames=list(reg.names, gene.names))
+	bbsr.prior <- matrix(0,ncol=dim(tdata)[1], nrow=dim(rdata)[1],
+									dimnames=list(reg.names, gene.names))
 
 	## TODO: Both seed and # of cv folds (in global.lars.regulators.r) are parameters that should be exposed to the user
 	seed <- 747
@@ -85,29 +89,49 @@ run_netprophet <- function(gene.names,
 	cat("Computing CLR\n")
 	clr.results <- mixedCLR(mi.stat=data.frame(), mi.dyn=mutual.information)
 	clr.results <- t(clr.results)
+	clr.results[t(allowed == 0)] <- NA
 	rownames(clr.results) <- gene.names
 	colnames(clr.results) <- reg.names
-	clr.rankings <- apply(clr.results, 2, function(col) {order(col, decreasing=T)})
+	# clr.rankings <- apply(clr.results, 2, function(col) {order(col, decreasing=T)})
 
 	source("bayesianRegression.R")
 	cat("Computing Bayesian Best Subset Regression\n")
 	models <- BBSR(X=rdata, Y=tdata, clr.mat=clr.results,
-								 nS=10, no.pr.val=0, weights.mat=t(allowed),# Come back to this
-								 prior.mat=t(prior), cores=availableCores()-1)
+								 #Weights are all 1, so bbsr ignores priors
+								 # no.pr.val is 1, so bbsr knows we have no priors
+								 nS=10, no.pr.val=1, weights.mat=t(prior), 
+								 # priors are all 0, so they're ignored in variable selection
+								 prior.mat=t(bbsr.prior), cores=availableCores()-1)
 	# bbsr.results has regulators as rows and genes as columns
 	bbsr.results <- matrix(0,ncol=dim(tdata)[1], nrow=dim(rdata)[1],
 									dimnames=list(reg.names, gene.names))
+
+#	big.na.filter <- unlist(lapply(models, 
+#																 function(model) {
+#																	 missing.coef <- any(is.na(model$betas.resc))
+#																	 return(!missing.coef)
+#																 }))
+	big.na.filter <- rep(T, dim(tdata)[1])
+
 	for (i in 1:length(models)) {
 		gene.model <- models[[i]]
-		bbsr.results[,i][gene.model$pp] <- gene.model$betas.resc
+		# NAs may appear in models during bootstrap runs, so we need to handle them
+		if(bootstrap.run) {
+			if(any(is.na(gene.model))) {
+				big.na.filter[i] <- F
+			} else {
+				bbsr.results[,i][gene.model$pp] <- gene.model$betas.resc
+			}
+		}
 	}
-		
+	bbsr.results <- bbsr.results[,big.na.filter]
+
 	lasso_component <- bbsr.results
 
 	# write.table(lasso_component,file.path(outputDirectory,lassoAdjMtrFileName),row.names=FALSE,col.names=FALSE,quote=FALSE)
 
 	## Perform model averaging to get final NetProphet Predictions
 	source("combine_models.r")
-	combinedAdjMtr <- combine_models(lasso_component)
-	return(list(lasso_component, combinedAdjMtr)) 
+	combinedAdjMtr <- combine_models(lasso_component, de_component, big.na.filter)
+	return(list(lasso_component, combinedAdjMtr))
 }

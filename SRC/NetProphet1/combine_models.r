@@ -1,8 +1,9 @@
 source("modelaverage.r")
 
-combine_models <- function(lasso_component) {
+combine_models <- function(lasso_component, de_component, excluded.genes) {
 	lasso_component <- lasso_component / max(abs(lasso_component))
 
+	de_component <- de_component[,excluded.genes]
 	indx <- which(de_component>0)
 	de_component[indx] <- de_component[indx] - min(abs(de_component[indx]))
 	indx <- which(de_component<0)

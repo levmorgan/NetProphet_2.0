@@ -1,3 +1,4 @@
+library(dplyr)
 args <- commandArgs(trailingOnly = TRUE)
 targetExpressionFile <- toString(args[1])
 regulatorExpressionFile <- toString(args[2])
@@ -18,8 +19,32 @@ library(Rmpi)
 mpi.bcast.Robj2slave(args)
 
 mpi.remote.exec(source("run_netprophet_parallel.r"))
-full.results <- mpi.remote.exec(run.netprophet.parallel(args))
-uniform.solution <- lars.multi.optimize.parallel()
+# full.results <- mpi.remote.exec(run.netprophet.parallel(args))
+full.results <- mpi.applyLB(1:8, function(job.num) {
+															run.netprophet.parallel(list(job.num, args))
+})
+mpi.close.Rslaves()
+save(full.results, file="full.results.raw.Rdata")
+result.dfs <- list(bind_rows(lapply(full.results,
+																		function(.res) {return(.res[[1]])})),
+									 bind_rows(lapply(full.results,
+																		function(.res) {return(.res[[2]])})))
+
+result.dfs <- lapply(result.dfs, 
+										 function(result) {
+											 result.g <- group_by(result, regulators)
+											 summarise_all(result.g, mean, na.rm=TRUE)
+										 })
+
+lasso_component <- subset(result.dfs[[1]], select=-c(regulators))
+write.table(lasso_component,file.path(outputDirectory,lassoAdjMtrFileName),row.names=FALSE,col.names=FALSE,quote=FALSE)
+combinedAdjMtr <- subset(result.dfs[[2]], select=-c(regulators))
+write.table(combinedAdjMtr,combinedAdjMtrFileName,row.names=FALSE,col.names=FALSE,quote=FALSE,sep='\t')
+
+cat("Successfully generated solution at ", outputDirectory, "\n")
+mpi.quit()
+#full.results.df <- bind_rows(full.results)
+
 
 
 ## Perform model averaging to get final NetProphet Predictions

@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH -n 11
-#SBATCH --cpus-per-task=2
+#SBATCH --ntasks 4
+#SBATCH --cpus-per-task=4
 #SBATCH --mem-per-cpu=10G
-#SBATCH -D ./SRC/NetProphet1/
-#SBATCH -o ../../LOG/map_netprophet1_network_%A.out
-#SBATCH -e ../../LOG/map_netprophet1_network_%A.err
+#SBATCH -D /scratch/mblab/levmorgan/NetProphet_2.0/SRC/NetProphet1
+#SBATCH -o LOG/map_netprophet1_network_%A.out
+#SBATCH -e LOG/map_netprophet1_network_%A.err
 
 targetExpressionFile=${1}
 regulatorExpressionFile=${2}
@@ -20,8 +20,10 @@ combinedAdjLstFileName=${11}
 regulatorGeneNamesFileName=${12}
 targetGeneNamesFileName=${13}
 
-#echo "calling mpirun now, SLURM_NTASKS=${SLURM_NTASKS}"
-echo "calling mpirun now, SLURM_NTASKS=20"
+echo "calling mpirun now, SLURM_NTASKS=${SLURM_NTASKS}"
 
-mpirun -np 20 R --no-save -q --args ${targetExpressionFile} ${regulatorExpressionFile} ${allowedMatrixFile} ${perturbationMatrixFile} ${differentialExpressionMatrixFile} ${microarrayFlag} ${nonGlobalShrinkageFlag} ${lassoAdjMtrFileName} ${combinedModelAdjMtrFileName} ${outputDirectory} ${combinedAdjLstFileName} ${regulatorGeneNamesFileName} ${targetGeneNamesFileName} < run_netprophet_parallel_init.r
+mpirun -np ${SLURM_NTASKS} R --no-save -q --args ${targetExpressionFile} ${regulatorExpressionFile} ${allowedMatrixFile} ${perturbationMatrixFile} ${differentialExpressionMatrixFile} ${microarrayFlag} ${nonGlobalShrinkageFlag} ${lassoAdjMtrFileName} ${combinedModelAdjMtrFileName} ${outputDirectory} ${combinedAdjLstFileName} ${regulatorGeneNamesFileName} ${targetGeneNamesFileName} < run_netprophet_parallel_init.r
+# mpirun -np ${NUM_JOBS} R --no-save -q --args ${targetExpressionFile} ${regulatorExpressionFile} ${allowedMatrixFile} ${perturbationMatrixFile} ${differentialExpressionMatrixFile} ${microarrayFlag} ${nonGlobalShrinkageFlag} ${lassoAdjMtrFileName} ${combinedModelAdjMtrFileName} ${outputDirectory} ${combinedAdjLstFileName} ${regulatorGeneNamesFileName} ${targetGeneNamesFileName} < run_netprophet_parallel_init.r
+#srun --mpi=pmi2 Rscript /ufrc/data/training/SLURM/prime/rmpi_test.R
+#srun --mpi=pmi2 R --no-save -q --args ${targetExpressionFile} ${regulatorExpressionFile} ${allowedMatrixFile} ${perturbationMatrixFile} ${differentialExpressionMatrixFile} ${microarrayFlag} ${nonGlobalShrinkageFlag} ${lassoAdjMtrFileName} ${combinedModelAdjMtrFileName} ${outputDirectory} ${combinedAdjLstFileName} ${regulatorGeneNamesFileName} ${targetGeneNamesFileName} < run_netprophet_parallel_init.r
 
